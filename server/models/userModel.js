@@ -49,7 +49,7 @@ userSchema.pre("save", async function () {
   }
 });
 
-userSchema.methods.correctPassword = async function (password, hashedPassword) {
+userSchema.methods.checkPassword = async function (password, hashedPassword) {
   return await bcrypt.compare(password, hashedPassword);
 };
 

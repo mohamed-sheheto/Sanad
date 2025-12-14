@@ -1,7 +1,7 @@
+require("dotenv").config({ path: "./.env", quiet: true });
 const mongoose = require("mongoose");
 const path = require("path");
 const app = require("./app");
-require("dotenv").config({ path: "./.env", quiet: true });
 
 const database = process.env.DATABASE;
 const port = 3000 || process.env.PORT;
