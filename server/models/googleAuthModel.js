@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema({
+const googleAuthSchema = new mongoose.Schema({
   username: {
     type: String,
     required: [true, "username is required"],
@@ -13,4 +13,4 @@ const userSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model("GoogleAuth", googleAuthSchema);

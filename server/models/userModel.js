@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
     minLength: [3, "username min length is 3 chars "],
     maxLength: [20, "username max length is 20 chars"],
   },
+
   email: {
     type: String,
     required: [true, "email is required"],
@@ -40,16 +41,16 @@ const userSchema = new mongoose.Schema({
   },
 });
 
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) next();
-
-  this.password = await bcrypt.hash(this.password, 12);
-  this.passwordConfirm = undefined;
-  next();
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
+  else {
+    this.password = await bcrypt.hash(this.password, 12);
+    this.passwordConfirm = undefined;
+  }
 });
 
-userSchema.methods.correctPassword(async function (password, hashedPassword) {
+userSchema.methods.correctPassword = async function (password, hashedPassword) {
   return await bcrypt.compare(password, hashedPassword);
-});
+};
 
 module.exports = mongoose.model("User", userSchema);
