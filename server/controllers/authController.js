@@ -1,8 +1,7 @@
 const User = require("../models/userModel");
-const GoogleAuth = require("../models/googleAuthModel");
 const jwt = require("jsonwebtoken");
 
-const createSendToken = (user, statusCode, res) => {
+exports.createSendToken = (user, statusCode, res) => {
   const token = jwt.sign({ id: user._id }, process.env.TOKEN_SECRET, {
     expiresIn: process.env.TOKEN_EXPIRES_IN,
   });
@@ -30,7 +29,7 @@ exports.signUp = async function (req, res, next) {
 
     createSendToken(newuser, 201, res);
   } catch (err) {
-    console.log(err);
+    console.log("signUp error", err);
     next(err);
   }
 };
@@ -48,7 +47,7 @@ exports.login = async function (req, res, next) {
 
     createSendToken(user, 200, res);
   } catch (err) {
-    console.log(err);
+    console.log("login error", err);
     next(err);
   }
 };
