@@ -5,6 +5,7 @@ const cookieParser = require("cookie-parser");
 const passport = require("passport");
 
 const userRouter = require("./routes/userRoutes");
+const trendRouter = require("./routes/trendRoutes");
 const googleController = require("./controllers/googleStrategyController");
 
 const app = express();
@@ -16,6 +17,7 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 app.use("/api/v1/auth", userRouter);
+app.use("/api/v1", trendRouter);
 
 app.get("/", (req, res) => {
   res.send("Home page after Google login");
@@ -28,7 +30,7 @@ app.get(
     failureRedirect: "/login",
     session: false,
   }),
-  googleController.googleCallback
+  googleController.googleCallback,
 );
 
 app.use((req, res, next) => {
