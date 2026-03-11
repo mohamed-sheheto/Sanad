@@ -30,7 +30,7 @@ exports.getPortfolioSnapshot = async (req, res, next) => {
   try {
     const userId = req.user._id;
 
-    const portfolio = await Portfolio.findOne({ user: userId }).lean();
+    const portfolio = await Portfolio.findOne({ user_id: userId }).lean();
 
     if (!portfolio) {
       return res.status(200).json({
@@ -114,4 +114,3 @@ exports.getPortfolioSnapshot = async (req, res, next) => {
     next(err);
   }
 };
-

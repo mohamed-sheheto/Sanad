@@ -31,6 +31,7 @@ app.use(passport.initialize());
 
 app.use("/api/v1/auth", userRouter);
 app.use("/api/v1", trendRouter);
+app.use("/api", trendRouter);
 
 app.use("/api/v1/assets", assetPriceRouter);
 app.use("/api/v1/portfolio", portfolioRouter);
