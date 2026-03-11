@@ -30,8 +30,8 @@ passport.use(
         err.statusCode = err.statusCode || 500;
         return cb(err, null);
       }
-    }
-  )
+    },
+  ),
 );
 
 exports.googleCallback = function (req, res, next) {

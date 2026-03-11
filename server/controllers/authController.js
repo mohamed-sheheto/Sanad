@@ -40,7 +40,7 @@ exports.protect = async (req, res, next) => {
   }
 };
 
-exports.createSendToken = (user, statusCode, res) => {
+const createSendToken = (user, statusCode, res) => {
   const token = jwt.sign({ id: user._id }, process.env.TOKEN_SECRET, {
     expiresIn: process.env.TOKEN_EXPIRES_IN,
   });
@@ -51,6 +51,7 @@ exports.createSendToken = (user, statusCode, res) => {
     ),
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   });
 
   user.password = undefined;
@@ -61,6 +62,8 @@ exports.createSendToken = (user, statusCode, res) => {
     user,
   });
 };
+
+exports.createSendToken = createSendToken;
 
 exports.signUp = async function (req, res, next) {
   try {
@@ -77,12 +80,14 @@ exports.login = async function (req, res, next) {
   try {
     const { email, password } = req.body;
     if (!email || !password)
-      res.status(400).send("please provide email and password");
+      return res.status(400).send("please provide email and password");
 
     const user = await User.findOne({ email }).select("+password");
 
     if (!user || !(await user.checkPassword(password, user.password)))
-      res.status(401).send("invalid email or password, please try again");
+      return res
+        .status(401)
+        .send("invalid email or password, please try again");
 
     createSendToken(user, 200, res);
   } catch (err) {
