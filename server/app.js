@@ -29,20 +29,18 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 
-app.use("/api/v1/auth", userRouter);
-app.use("/api/v1", trendRouter);
+app.use("/api/auth", userRouter);
 app.use("/api", trendRouter);
-
-app.use("/api/v1/assets", assetPriceRouter);
-app.use("/api/v1/portfolio", portfolioRouter);
+app.use("/api/assets", assetPriceRouter);
+app.use("/api/portfolio", portfolioRouter);
 
 app.get("/", (req, res) => {
   res.send("Home page after Google login");
 });
 
-app.get("/api/v1/auth/google", passport.authenticate("google"));
+app.get("/api/auth/google", passport.authenticate("google"));
 app.get(
-  "/api/v1/auth/google/redirect",
+  "/api/auth/google/redirect",
   passport.authenticate("google", {
     failureRedirect: "/login",
     session: false,
