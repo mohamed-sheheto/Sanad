@@ -37,11 +37,10 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 border-l-4 ${
-                isActive
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 border-l-4 ${isActive
                   ? 'bg-[#F59E0B]/20 border-l-4 border-[#F59E0B] text-[#F59E0B]'
                   : 'text-[#6B7280] border-l-4 border-transparent hover:text-[#F3F4F6] hover:bg-[#2a2a2a]'
-              }`}
+                }`}
             >
               <Icon className="w-5 h-5" />
               <span className="font-medium">{item.label}</span>

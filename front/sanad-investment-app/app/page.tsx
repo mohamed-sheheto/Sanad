@@ -1,36 +1,79 @@
-'use client'
+"use client";
 
-import { useAuth } from '@/components/auth-context'
-import { useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { useAuth } from "@/components/auth-context";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { LineChart, Line, ResponsiveContainer } from "recharts";
 
 const chartData = [
-  { month: 'Jan', value: 0 },
-  { month: 'Feb', value: 2 },
-  { month: 'Mar', value: 1.5 },
-  { month: 'Apr', value: 4 },
-  { month: 'May', value: 3.5 },
-  { month: 'Jun', value: 15 },
-]
+  { month: "Jan", value: 0 },
+  { month: "Feb", value: 2 },
+  { month: "Mar", value: 1.5 },
+  { month: "Apr", value: 4 },
+  { month: "May", value: 3.5 },
+  { month: "Jun", value: 15 },
+];
 
 export default function LoginPage() {
-  const { login, isLoggedIn } = useAuth()
-  const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const { login, isLoggedIn } = useAuth();
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [savedEmails, setSavedEmails] = useState<string[]>([]);
 
   useEffect(() => {
-    if (isLoggedIn) {
-      router.push('/dashboard')
-    }
-  }, [isLoggedIn, router])
+    const token = localStorage.getItem("jwt");
+    const history = localStorage.getItem("login_history");
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault()
-    login()
-    router.push('/dashboard')
-  }
+    if (history) {
+      setSavedEmails(JSON.parse(history));
+    }
+
+    if (isLoggedIn && token) {
+      router.push("/dashboard");
+    }
+  }, [isLoggedIn, router]);
+
+  const handleLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setError("");
+
+    try {
+      const formData = new URLSearchParams();
+      formData.append("username", email);
+      formData.append("password", password);
+
+      const response = await fetch("http://localhost:8000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData.toString(),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const token = data.access_token || data.token;
+        localStorage.setItem("jwt", token);
+
+        const updatedHistory = Array.from(new Set([...savedEmails, email]));
+        localStorage.setItem("login_history", JSON.stringify(updatedHistory));
+
+        login(data.user, token);
+        window.location.replace("/dashboard");
+      } else {
+        setError(data.detail || "Email or password incorrect");
+      }
+    } catch (err) {
+      setError("Connection error with the server");
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = "http://localhost:8000/api/auth/google";
+  };
 
   return (
     <div className="min-h-screen bg-[#000000] flex items-center justify-center p-4">
@@ -38,14 +81,16 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-[#F59E0B]">Sanad</h1>
-          <p className="text-[#6B7280] mt-2">Your AI-Powered Investment Guide</p>
+          {/* <p className="text-[#6B7280] mt-2">
+            Your AI-Powered Investment Guide
+          </p> */}
         </div>
 
         {/* Hero Image */}
         <div className="rounded-lg mb-8 border border-[#1F2937] h-48 overflow-hidden">
-          <img 
-            src="/images/hero-sanad-cover.png" 
-            alt="Investment themes: gold, real estate, and stocks"
+          <img
+            src="/images/hero-sanad-cover.png"
+            alt="Investment themes"
             className="w-full h-full object-cover"
           />
         </div>
@@ -55,12 +100,37 @@ export default function LoginPage() {
           <h2 className="text-2xl font-bold text-[#F3F4F6] mb-3">
             Welcome to Sanad
           </h2>
+          {error && (
+            <p className="text-red-500 text-sm mb-2 font-bold">{error}</p>
+          )}
           <p className="text-[#6B7280] mb-6">
             Your AI-Powered Investment Guide
           </p>
         </div>
 
-        {/* Login Form */}
+        {/* Saved Accounts */}
+        {savedEmails.length > 0 && (
+          <div className="mb-6 bg-[#1a1a1a] border border-[#1F2937] rounded-lg p-4">
+            <p className="text-xs text-[#6B7280] mb-3 uppercase tracking-wider font-bold">
+              Saved Accounts
+            </p>
+            <div className="space-y-2">
+              {savedEmails.map((savedEmail) => (
+                <button
+                  key={savedEmail}
+                  type="button"
+                  onClick={() => setEmail(savedEmail)}
+                  className="w-full text-left p-2 text-sm text-[#F3F4F6] hover:bg-[#F59E0B]/10 rounded border border-transparent hover:border-[#F59E0B] transition flex items-center gap-2"
+                >
+                  <span className="w-2 h-2 rounded-full bg-[#F59E0B]"></span>
+                  {savedEmail}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Login Form
         <form onSubmit={handleLogin} className="space-y-4 mb-6">
           <div>
             <label className="block text-sm font-medium text-[#F3F4F6] mb-2">
@@ -68,6 +138,7 @@ export default function LoginPage() {
             </label>
             <input
               type="email"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.com"
@@ -80,6 +151,7 @@ export default function LoginPage() {
             </label>
             <input
               type="password"
+              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -92,45 +164,29 @@ export default function LoginPage() {
           >
             Login
           </button>
-        </form>
+        </form> */}
 
-        {/* Google Button */}
         <button
-          onClick={handleLogin}
-          className="w-full bg-[#F59E0B] hover:bg-[#FBBF24] text-[#111827] font-bold py-3 rounded-lg transition duration-200 mb-6"
+          onClick={handleGoogleLogin}
+          className="w-full bg-[#F59E0B] hover:bg-[#FBBF24] text-[#111827] font-bold py-3 rounded-lg transition duration-200 mb-6 flex items-center justify-center gap-2"
         >
           Continue with Google
         </button>
 
-        {/* Quick Login Button */}
-        <button
-          onClick={handleLogin}
+        {/* <button
+          onClick={() => handleLogin()}
           className="w-full bg-[#F59E0B] hover:bg-[#FBBF24] text-[#111827] font-bold py-3 rounded-lg transition duration-200 mb-8"
         >
           Get Started
-        </button>
+        </button> */}
 
         {/* Portfolio Growth Simulation */}
         <div className="bg-[#1a1a1a] border border-[#1F2937] rounded-lg p-6">
-          <h3 className="text-sm font-bold text-[#F3F4F6] mb-4">
-            Portfolio Growth Simulation
+          <h3 className="text-sm font-bold text-[#F3F4F6] mb-4 text-center">
+            Portfolio Growth
           </h3>
-          <div className="mb-4">
-            <p className="text-[#F59E0B] text-2xl font-bold">+15%</p>
-            <p className="text-[#6B7280] text-xs">Last 6 Months +15%</p>
-          </div>
-          <ResponsiveContainer width="100%" height={150}>
+          <ResponsiveContainer width="100%" height={120}>
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
-              <XAxis dataKey="month" stroke="#6B7280" style={{ fontSize: '12px' }} />
-              <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #1F2937',
-                }}
-                labelStyle={{ color: '#F3F4F6' }}
-              />
               <Line
                 type="monotone"
                 dataKey="value"
@@ -143,5 +199,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
