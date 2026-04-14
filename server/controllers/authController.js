@@ -1,5 +1,35 @@
 const User = require("../models/userModel");
+const googleModel = require("../models/googleAuthModel");
 const jwt = require("jsonwebtoken");
+
+const createSendToken = (user, statusCode, res) => {
+  const token = jwt.sign(
+    { id: user._id || user.id },
+    process.env.TOKEN_SECRET,
+    {
+      expiresIn: process.env.TOKEN_EXPIRES_IN,
+    },
+  );
+
+  res.cookie("jwt", token, {
+    expires: new Date(
+      Date.now() + process.env.COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000,
+    ),
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  });
+
+  if (user.password) user.password = undefined;
+
+  res.status(statusCode).json({
+    status: "success",
+    token,
+    user,
+  });
+};
+
+exports.createSendToken = createSendToken;
 
 exports.protect = async (req, res, next) => {
   try {
@@ -16,17 +46,22 @@ exports.protect = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         status: "fail",
-        message: "You are not logged in! Please log in to get access.",
+        message: "You are not logged in!",
       });
     }
 
     const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
 
-    const currentUser = await User.findById(decoded.id);
+    // البحث في الموديلين لضمان وجود اليوزر
+    let currentUser = await User.findById(decoded.id);
+    if (!currentUser) {
+      currentUser = await googleModel.findById(decoded.id);
+    }
+
     if (!currentUser) {
       return res.status(401).json({
         status: "fail",
-        message: "The user belonging to this token does no longer exist.",
+        message: "The user belonging to this token no longer exist.",
       });
     }
 
@@ -40,38 +75,11 @@ exports.protect = async (req, res, next) => {
   }
 };
 
-const createSendToken = (user, statusCode, res) => {
-  const token = jwt.sign({ id: user._id }, process.env.TOKEN_SECRET, {
-    expiresIn: process.env.TOKEN_EXPIRES_IN,
-  });
-
-  res.cookie("jwt", token, {
-    expires: new Date(
-      Date.now() + process.env.COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000,
-    ),
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  });
-
-  user.password = undefined;
-
-  res.status(statusCode).json({
-    status: "success",
-    token,
-    user,
-  });
-};
-
-exports.createSendToken = createSendToken;
-
 exports.signUp = async function (req, res, next) {
   try {
     const newuser = await User.create(req.body);
-
     createSendToken(newuser, 201, res);
   } catch (err) {
-    console.log("signUp error", err);
     next(err);
   }
 };
@@ -80,34 +88,25 @@ exports.login = async function (req, res, next) {
   try {
     const { email, password } = req.body;
     if (!email || !password)
-      return res.status(400).send("please provide email and password");
+      return res.status(400).send("Provide email and password");
 
     const user = await User.findOne({ email }).select("+password");
-
-    if (!user || !(await user.checkPassword(password, user.password)))
-      return res
-        .status(401)
-        .send("invalid email or password, please try again");
-
+    if (!user || !(await user.checkPassword(password, user.password))) {
+      return res.status(401).send("Invalid email or password");
+    }
     createSendToken(user, 200, res);
   } catch (err) {
-    console.log("login error", err);
     next(err);
   }
 };
 
 exports.getMe = async function (req, res, next) {
   try {
-    const user = await User.findById(req.user._id);
-
-    res.status(200).json({
-      status: "success",
-      data: {
-        user,
-      },
-    });
+    const user =
+      (await User.findById(req.user._id)) ||
+      (await googleModel.findById(req.user._id));
+    res.status(200).json({ status: "success", data: { user } });
   } catch (err) {
-    console.log("getMe error", err);
     next(err);
   }
 };
