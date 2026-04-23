@@ -22,10 +22,8 @@ app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
-// تهيئة Passport
 app.use(passport.initialize());
 
-// 2. الـ Google Auth Routes (وضعناها قبل الـ routers العامة لضمان الأولوية)
 app.get(
   "/api/auth/google",
   passport.authenticate("google", { scope: ["profile", "email"] }),
@@ -40,7 +38,6 @@ app.get(
   googleController.googleCallback,
 );
 
-// 3. باقي الـ API Routers
 app.use("/api/auth", userRouter);
 app.use("/api", trendRouter);
 app.use("/api/assets", assetPriceRouter);
