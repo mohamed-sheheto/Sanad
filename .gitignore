@@ -27,8 +27,33 @@ yarn-error.log*
 
 .env*.local
 .env
+front/.next/
+front/out/
+front/build/
 
 .vercel
-
+__pycache__/
+*.py[cod]
+*$py.class
 *.tsbuildinfo
 next.config.js
+
+venv/
+env/
+.venv/
+Pipfile.lock
+# Data & Caching (if your ML model saves datasets or weights locally)
+*.csv
+*.h5
+*.keras
+.pytest_cache/
+
+# =========================
+# OS & IDE Specific
+# =========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+plan.md
