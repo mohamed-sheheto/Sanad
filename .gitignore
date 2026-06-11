@@ -46,6 +46,9 @@ Pipfile.lock
 *.csv
 *.h5
 *.keras
+*.joblib
+*.npy
+ml-service/models/saved/
 .pytest_cache/
 
 # =========================

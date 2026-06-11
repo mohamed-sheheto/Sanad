@@ -38,42 +38,69 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ────────────────────────────────────────────────
-  // جاهز للربط بالباك إند والـ AI
   useEffect(() => {
-    /*
     async function fetchProfileData() {
       try {
         setLoading(true)
         setError(null)
 
-        const res = await fetch('/api/user/profile')   // ← غير الرابط لاحقاً
+        const token = localStorage.getItem('jwt')
+        if (!token) {
+          setError('Not logged in')
+          setLoading(false)
+          return
+        }
 
-        if (!res.ok) throw new Error('Failed to load profile')
+        const headers = {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
 
-        const data = await res.json()
+        const [userRes, portfolioRes] = await Promise.all([
+          fetch('http://localhost:8000/api/auth/me', { headers }),
+          fetch('http://localhost:8000/api/portfolio/snapshot', { headers }),
+        ])
 
-        // تحديث بيانات المستخدم
-        setUser({
-          name: data.user?.name || user.name,
-          email: data.user?.email || user.email,
-          avatarInitial: data.user?.name?.[0]?.toUpperCase() || "U",
-          joinedDate: data.user?.joinedDate || user.joinedDate
-        })
+        if (userRes.status === 401 || portfolioRes.status === 401) {
+          localStorage.removeItem('jwt')
+          window.location.href = '/login'
+          return
+        }
 
-        // تحديث بيانات المحفظة
-        if (data.portfolio) {
-          setPortfolio(data.portfolio)
+        const userData = await userRes.json()
+        const portfolioData = await portfolioRes.json()
+
+        if (userData.status === 'success' && userData.data?.user) {
+          const u = userData.data.user
+          setUser({
+            name: u.username || u.name || 'User',
+            email: u.email || '',
+            avatarInitial: (u.username || u.name || 'U')[0].toUpperCase(),
+            joinedDate: u.joinedAt
+              ? new Date(u.joinedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+              : 'Unknown',
+          })
+        }
+
+        if (portfolioData.success && portfolioData.data) {
+          const p = portfolioData.data
+          setPortfolio({
+            totalValue: p.totalValue || 0,
+            totalValueChange: p.totalValueChange || 0,
+            topAsset: p.topAsset || 'N/A',
+            topAssetValue: p.topAssetValue || 0,
+            topAssetPercentage: p.topAssetPercentage || 0,
+          })
         }
       } catch (err: any) {
-        setError(err.message || 'حدث خطأ أثناء تحميل البيانات')
+        setError(err.message || 'Failed to load profile')
         console.log('Using fallback profile data')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchProfileData()*/
+    fetchProfileData()
   }, []);
 
   // ────────────────────────────────────────────────

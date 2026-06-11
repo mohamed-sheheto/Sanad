@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import Image from 'next/image'
+import { useState, useEffect, useCallback } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
-// ────────────────────────────────────────────────
-// Types
 type PriceTrend = {
   month: string
   price: number
@@ -20,8 +19,6 @@ type MarketStats = {
   marketGrowth: number
 }
 
-// ────────────────────────────────────────────────
-// Mock Data (fallback)
 const mockPriceData: PriceTrend[] = [
   { month: 'Nov', price: 4200 },
   { month: 'Dec', price: 4350 },
@@ -39,10 +36,26 @@ const mockPropertyTypeData: PropertyTypeData[] = [
   { type: 'Penthouse', avgPrice: 3200000 },
 ]
 
+const ML_SERVICE = 'http://localhost:8000/api/assets'
+
+const getCityImagePath = (city: string): string => {
+  const map: Record<string, string> = {
+    'Cairo': 'cairo.png',
+    'Giza': 'giza.png',
+    'Alexandria': 'alexandria.png',
+    'New Cairo': 'newCairo.png',
+    'Sheikh Zayed': 'sheikhZayed.png',
+    '6th of October': '6thOctober.png',
+    'North Coast': 'northCoast.png',
+    'Madinaty': 'madinaty.png',
+  }
+  return `/cities/${map[city] || 'cairo.png'}`
+}
+
 export default function RealEstatePage() {
   const [selectedCity, setSelectedCity] = useState('Cairo')
+  const [selectedPropertyType, setSelectedPropertyType] = useState('All Types')
 
-  // Dynamic States
   const [priceData, setPriceData] = useState<PriceTrend[]>(mockPriceData)
   const [propertyTypeData, setPropertyTypeData] = useState<PropertyTypeData[]>(mockPropertyTypeData)
   const [marketStats, setMarketStats] = useState<MarketStats>({
@@ -53,54 +66,80 @@ export default function RealEstatePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // ────────────────────────────────────────────────
-  // Fetch Data from Backend / AI
-  useEffect(() => {/*
-    async function fetchRealEstateData() {
-      try {
-        setLoading(true)
-        setError(null)
+  const [predictValue, setPredictValue] = useState('')
+  const [predictionResult, setPredictionResult] = useState<number | null>(null)
+  const [predictLoading, setPredictLoading] = useState(false)
 
-        const res = await fetch('/api/real-estate')
+  const fetchRealEstateData = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
 
-        if (!res.ok) throw new Error('API not ready yet')
+      const res = await fetch(`${ML_SERVICE}/realestate/history?city=${encodeURIComponent(selectedCity)}`)
 
-        const data = await res.json()
+      if (!res.ok) throw new Error('API not ready')
 
-        // Update states with real data
-        if (data.priceTrend) setPriceData(data.priceTrend)
-        if (data.propertyTypes) setPropertyTypeData(data.propertyTypes)
-        if (data.marketStats) setMarketStats(data.marketStats)
+      const data = await res.json()
 
-      } catch (err) {
-        console.log('Using mock real estate data')
-        // Keep mock data as fallback
-      } finally {
-        setLoading(false)
-      }
+      if (data.priceTrend) setPriceData(data.priceTrend)
+      if (data.propertyTypes) setPropertyTypeData(data.propertyTypes)
+      if (data.marketStats) setMarketStats(data.marketStats)
+
+    } catch (err) {
+      console.log('Using mock real estate data')
+    } finally {
+      setLoading(false)
     }
+  }, [selectedCity])
 
-    fetchRealEstateData()*/
-  }, [])
+  useEffect(() => {
+    fetchRealEstateData()
+  }, [fetchRealEstateData])
 
-  // ────────────────────────────────────────────────
+  const handlePredict = async () => {
+    const value = parseFloat(predictValue)
+    if (isNaN(value) || value <= 0) return
+
+    setPredictLoading(true)
+    setPredictionResult(null)
+
+    try {
+      const res = await fetch(`${ML_SERVICE}/realestate/predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          value,
+          city: selectedCity,
+          property_type: selectedPropertyType === 'All Types' ? 'Apartment' : selectedPropertyType,
+        }),
+      })
+
+      if (!res.ok) throw new Error('Prediction failed')
+
+      const json = await res.json()
+      setPredictionResult(json.data?.prediction ?? json.prediction)
+    } catch (err) {
+      console.error('Prediction error:', err)
+    } finally {
+      setPredictLoading(false)
+    }
+  }
+
   if (loading) {
     return <div className="text-center py-20 text-[#F3F4F6]">جاري تحميل بيانات العقارات...</div>
   }
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div>
         <h1 className="text-4xl font-bold text-[#F3F4F6] mb-2">Real Estate Analysis</h1>
         <p className="text-[#6B7280]">Analyze property investment opportunities</p>
       </div>
 
-      {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-[#1a1a1a] border border-[#1F2937] rounded-lg p-4">
           <label className="block text-sm font-medium text-[#F3F4F6] mb-2">City</label>
-          <select 
+          <select
             value={selectedCity}
             onChange={(e) => setSelectedCity(e.target.value)}
             className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#1F2937] rounded-lg text-[#F3F4F6] focus:outline-none focus:border-[#F59E0B]"
@@ -117,7 +156,11 @@ export default function RealEstatePage() {
         </div>
         <div className="bg-[#1a1a1a] border border-[#1F2937] rounded-lg p-4">
           <label className="block text-sm font-medium text-[#F3F4F6] mb-2">Property Type</label>
-          <select className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#1F2937] rounded-lg text-[#F3F4F6] focus:outline-none focus:border-[#F59E0B]">
+          <select
+            value={selectedPropertyType}
+            onChange={(e) => setSelectedPropertyType(e.target.value)}
+            className="w-full px-4 py-2 bg-[#0a0a0a] border border-[#1F2937] rounded-lg text-[#F3F4F6] focus:outline-none focus:border-[#F59E0B]"
+          >
             <option>All Types</option>
             <option>Apartment</option>
             <option>Villa</option>
@@ -129,38 +172,61 @@ export default function RealEstatePage() {
         </div>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-[#1a1a1a] border border-[#1F2937] rounded-lg p-6">
           <p className="text-[#6B7280] text-sm font-medium mb-2">Average ROI</p>
           <p className="text-4xl font-bold text-[#F3F4F6]">{marketStats.averageROI}%</p>
-          <p className="text-[#10B981] text-sm mt-2">+0.3% vs last month</p>
+          <p className="text-[#10B981] text-sm mt-2">Predicted annual return</p>
         </div>
         <div className="bg-[#1a1a1a] border border-[#1F2937] rounded-lg p-6">
           <p className="text-[#6B7280] text-sm font-medium mb-2">Market Growth</p>
           <p className="text-4xl font-bold text-[#10B981]">+{marketStats.marketGrowth}%</p>
           <p className="text-[#6B7280] text-sm mt-2">Year-over-year growth</p>
         </div>
-      </div>
-
-      {/* Map Placeholder */}
-      <div className="bg-[#1a1a1a] border border-[#1F2937] rounded-lg p-6">
-        <div className="w-full bg-gradient-to-br from-[#3B82F6]/10 to-[#1a1a1a] rounded-lg border border-[#1F2937] p-12 flex flex-col items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="text-6xl mb-4">🗺️</div>
-            <p className="text-[#F3F4F6] font-medium">Interactive Map will be integrated with backend data</p>
+        <div className="bg-[#1a1a1a] border border-[#1F2937] rounded-lg p-6">
+          <p className="text-[#6B7280] text-sm font-medium mb-2">AI Price Prediction</p>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              value={predictValue}
+              onChange={(e) => setPredictValue(e.target.value)}
+              placeholder="Price per m²"
+              className="w-36 px-3 py-2 bg-[#0a0a0a] border border-[#1F2937] rounded-lg text-[#F3F4F6] text-sm focus:outline-none focus:border-[#F59E0B]"
+            />
+            <button
+              onClick={handlePredict}
+              disabled={predictLoading}
+              className="px-4 py-2 bg-[#F59E0B] text-black font-medium rounded-lg hover:bg-[#D97706] disabled:opacity-50 text-sm"
+            >
+              {predictLoading ? '...' : 'Predict ROI'}
+            </button>
           </div>
+          {predictionResult !== null && (
+            <p className="text-[#10B981] text-lg font-bold mt-2">
+              ROI: {predictionResult > 0 ? '+' : ''}{predictionResult}%
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Price per m² Trend */}
+      <div className="bg-[#1a1a1a] border border-[#1F2937] rounded-lg p-6">
+        <div className="relative w-full min-h-[400px] rounded-lg overflow-hidden">
+          <Image
+            src={getCityImagePath(selectedCity)}
+            alt={`Map of ${selectedCity}`}
+            fill
+            className="object-cover"
+          />
+        </div>
+      </div>
+
       <div className="bg-[#1a1a1a] border border-[#1F2937] rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-[#F3F4F6]">Price per m² Trend</h2>
-          <span className="text-[#10B981] font-bold">+5.2%</span>
+          <span className="text-[#10B981] font-bold">+{marketStats.marketGrowth}%</span>
         </div>
-        <p className="text-[#6B7280] text-sm mb-4">Last 6 months in {selectedCity}</p>
-        
+        <p className="text-[#6B7280] text-sm mb-4">Last 12 months in {selectedCity}</p>
+
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={priceData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />
@@ -181,10 +247,9 @@ export default function RealEstatePage() {
         </ResponsiveContainer>
       </div>
 
-      {/* Average Price by Property Type */}
       <div className="bg-[#1a1a1a] border border-[#1F2937] rounded-lg p-6">
         <h2 className="text-2xl font-bold text-[#F3F4F6] mb-4">Average Price by Property Type</h2>
-        
+
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={propertyTypeData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" />

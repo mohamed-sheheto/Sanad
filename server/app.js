@@ -10,6 +10,7 @@ const userRouter = require("./routes/userRoutes");
 const trendRouter = require("./routes/trendRoutes");
 const assetPriceRouter = require("./routes/assetPriceRoutes");
 const portfolioRouter = require("./routes/portfolioRoutes");
+const comparisonRouter = require("./routes/comparisonRoutes");
 const googleController = require("./controllers/googleStrategyController");
 
 const app = express();
@@ -42,6 +43,7 @@ app.use("/api/auth", userRouter);
 app.use("/api", trendRouter);
 app.use("/api/assets", assetPriceRouter);
 app.use("/api/portfolio", portfolioRouter);
+app.use("/api/comparison", comparisonRouter);
 
 app.get("/", (req, res) => res.send("Sanad API is running..."));
 

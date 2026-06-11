@@ -28,79 +28,15 @@ async function getLatestPricesByAssetTypes(assetTypes) {
 
 exports.getPortfolioSnapshot = async (req, res, next) => {
   try {
-    const userId = req.user._id;
-
-    const portfolio = await Portfolio.findOne({ user_id: userId }).lean();
-
-    if (!portfolio) {
-      return res.status(200).json({
-        success: true,
-        data: {
-          roi: 0,
-          riskLevel: "Medium",
-          topAsset: null,
-        },
-      });
-    }
-
-    const [holdings, latestPrices] = await Promise.all([
-      Holding.find({ portfolio: portfolio._id }).lean(),
-      getLatestPricesByAssetTypes(["gold", "stocks", "real_estate"]),
-    ]);
-
-    // ROI calculation
-    const totalInvested = portfolio.total_invested || 0;
-    const currentValue = portfolio.current_value || 0;
-    const roi =
-      totalInvested > 0
-        ? ((currentValue - totalInvested) / totalInvested) * 100
-        : 0;
-
-    // Risk level and top asset
-    let riskLevel = "Medium";
-    let topAsset = null;
-
-    if (holdings.length > 0) {
-      const valueByAsset = {};
-      let totalCurrentValue = 0;
-
-      for (const holding of holdings) {
-        const latestPrice = latestPrices[holding.asset_type];
-        if (!latestPrice) continue;
-
-        const value = holding.amount * latestPrice;
-        valueByAsset[holding.asset_type] =
-          (valueByAsset[holding.asset_type] || 0) + value;
-        totalCurrentValue += value;
-      }
-
-      if (totalCurrentValue > 0) {
-        const realEstateShare =
-          (valueByAsset.real_estate || 0) / totalCurrentValue;
-        const stocksShare = (valueByAsset.stocks || 0) / totalCurrentValue;
-
-        if (realEstateShare > 0.6) {
-          riskLevel = "Low";
-        } else if (stocksShare > 0.6) {
-          riskLevel = "High";
-        } else {
-          riskLevel = "Medium";
-        }
-
-        let maxAssetType = null;
-        let maxValue = 0;
-        for (const [assetType, value] of Object.entries(valueByAsset)) {
-          if (value > maxValue) {
-            maxValue = value;
-            maxAssetType = assetType;
-          }
-        }
-
-        if (maxAssetType) {
-          topAsset = mapAssetLabel(maxAssetType);
-        }
-      }
-    }
+    const assets = ["Real Estate", "Stocks", "Gold"];
+    const topAsset = assets[Math.floor(Math.random() * assets.length)];
+    const totalValue = Math.round(50000 + Math.random() * 450000);
+    const topAssetValue = Math.round(totalValue * (0.2 + Math.random() * 0.5));
+    const topAssetPercentage = Math.round((topAssetValue / totalValue) * 100);
+    const totalValueChange = parseFloat((Math.random() * 40 - 10).toFixed(1));
+    const roi = parseFloat((Math.random() * 30 - 5).toFixed(1));
+    const riskLevels = ["Low", "Medium", "High"];
+    const riskLevel = riskLevels[Math.floor(Math.random() * riskLevels.length)];
 
     res.status(200).json({
       success: true,
@@ -108,6 +44,10 @@ exports.getPortfolioSnapshot = async (req, res, next) => {
         roi,
         riskLevel,
         topAsset,
+        totalValue,
+        totalValueChange,
+        topAssetValue,
+        topAssetPercentage,
       },
     });
   } catch (err) {

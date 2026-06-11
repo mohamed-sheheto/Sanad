@@ -158,6 +158,24 @@ class StockModel:
             'actual': y_test_real.flatten()
         }
     
+    @property
+    def is_trained(self):
+        return self.model is not None and self.scaler is not None
+
+    def save(self, asset_dir):
+        from .model_cache import save_model
+        save_model(self.model, self.scaler, self.last_prices, asset_dir)
+
+    def load(self, asset_dir):
+        from .model_cache import load_model
+        model, scaler, last_prices, metadata = load_model(asset_dir)
+        if model is None:
+            return False
+        self.model = model
+        self.scaler = scaler
+        self.last_prices = last_prices
+        return True
+
     def predict(self, price_value):
 
         if self.model is None or self.scaler is None or self.last_prices is None:
